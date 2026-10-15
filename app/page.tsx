@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Be_Vietnam_Pro, Pacifico, Playpen_Sans } from 'next/font/google'
 
@@ -43,50 +43,48 @@ export function BottomSheet({ onClose }: { onClose: () => void }) {
   return <div role="dialog" aria-modal="true" className="bottom-sheet"><button onClick={onClose}>Đóng</button></div>
 }
 
-export default function Page() {
-  const [date, setDate] = useState('')
-  const [status, setStatus] = useState<'idle' | 'wrong' | 'success'>('idle')
+type VideoScreenProps = { videoSrc?: string }
+
+export function VideoScreen({ videoSrc }: VideoScreenProps) {
+  const [canSkip, setCanSkip] = useState(false)
+  const [ended, setEnded] = useState(false)
+  const [playing, setPlaying] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
   const reduceMotion = useReducedMotion()
 
-  function unlock() {
-    if (date.trim() === '14/02/2024') setStatus('success')
-    else setStatus('wrong')
-  }
+  useEffect(() => {
+    if (!videoSrc) return
+    const timer = window.setTimeout(() => setCanSkip(true), 5000)
+    return () => window.clearTimeout(timer)
+  }, [videoSrc])
 
   return (
-    <main className={`${pacifico.variable} ${playpen.variable} ${vietnam.variable} gate-shell ${status === 'success' ? 'gate-success' : ''}`}>
-      <div className="blob blob-pink" aria-hidden="true" />
-      <div className="blob blob-blue" aria-hidden="true" />
-      <div className="blob blob-pink-secondary" aria-hidden="true" />
+    <main className={`${pacifico.variable} ${playpen.variable} ${vietnam.variable} video-shell`}>
+      <div className="video-orb video-orb-pink" aria-hidden="true" />
+      <div className="video-orb video-orb-blue" aria-hidden="true" />
       <div className="grain" aria-hidden="true" />
-      <section className="gate-content" aria-labelledby="gate-title">
-        <ProgressSegments active={1} total={5} />
-        <div className="gate-heading">
-          <p className="eyebrow">MỘT NGÀY RẤT ĐẶC BIỆT</p>
-          <h1 id="gate-title">Ngày mình bắt đầu là ngày nào?</h1>
-          <p className="gate-hint">Nhập ngày đầu tiên của chúng mình để mở khóa kỷ niệm.</p>
+      <section className="video-content" aria-labelledby="video-title">
+        <ProgressSegments active={3} total={5} />
+        <p className="eyebrow">MỘT THƯỚC PHIM NHỎ</p>
+        <h1 id="video-title">Những ngày mình bên nhau</h1>
+        <motion.div className="polaroid" initial={reduceMotion ? false : { opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 180, damping: 22 }}>
+          <div className={`video-frame ${!videoSrc ? 'video-placeholder' : ''}`}>
+            {videoSrc ? <video ref={videoRef} src={videoSrc} controls={false} onPlay={() => setPlaying(true)} onEnded={() => { setPlaying(false); setEnded(true) }} aria-label="Video kỷ niệm" /> : <span>Đang chuẩn bị</span>}
+            {videoSrc && !playing && !ended && <button className="play-button" type="button" aria-label="Phát video" onClick={() => { void videoRef.current?.play() }}>Phát</button>}
+          </div>
+          <p className="polaroid-caption">Một chút dịu dàng dành cho chúng mình</p>
+        </motion.div>
+        <div className="video-actions">
+          {canSkip && !ended && <button className="skip-button" type="button" onClick={() => setEnded(true)}>Bỏ qua</button>}
+          {ended && <Button>Tiếp tục</Button>}
         </div>
-        <form className={`gate-form ${status === 'wrong' ? 'is-wrong' : ''} ${status === 'success' ? 'is-success' : ''}`} onSubmit={(event) => { event.preventDefault(); unlock() }}>
-          <label className="date-field">
-            <span className="sr-only">Ngày bắt đầu, định dạng ngày tháng năm</span>
-            <input
-              aria-describedby={status === 'wrong' ? 'date-error' : undefined}
-              aria-invalid={status === 'wrong'}
-              autoComplete="off"
-              inputMode="numeric"
-              maxLength={10}
-              placeholder="dd/mm/yyyy"
-              value={date}
-              onChange={(event) => { setDate(event.target.value); if (status === 'wrong') setStatus('idle') }}
-            />
-          </label>
-          {status === 'wrong' && <p id="date-error" className="date-error" role="alert">Chưa đúng rồi, thử lại nhé</p>}
-          {status !== 'success' && <Button type="submit">Mở khóa</Button>}
-        </form>
-        {status === 'success' && <motion.p className="success-message" initial={reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 180, damping: 22 }}>Đúng rồi. Mình cùng bước tiếp nhé.</motion.p>}
       </section>
     </main>
   )
+}
+
+export default function Page() {
+  return <VideoScreen />
 }
 
 export const designTokens = {
