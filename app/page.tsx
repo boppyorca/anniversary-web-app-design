@@ -61,6 +61,15 @@ type TimelineItem = {
 
 type TimelineScreenProps = { items?: TimelineItem[] }
 
+type FlipbookPage = { image: string; alt?: string }
+type FlipbookScreenProps = { pages?: FlipbookPage[]; onComplete?: () => void }
+
+const defaultFlipbookPages: FlipbookPage[] = [
+  { image: '', alt: 'Một trang kỷ niệm' },
+  { image: '', alt: 'Một trang kỷ niệm khác' },
+  { image: '', alt: 'Trang cuối của kỷ niệm' },
+]
+
 const defaultTimeline: TimelineItem[] = [
   { date: '14.02.2024', title: 'Ngày đầu tiên', text: 'Mình đã bắt đầu câu chuyện dịu dàng này bằng một nụ cười thật lâu.' },
   { date: '03.03.2024', title: 'Buổi hẹn đầu', text: 'Một buổi chiều rất bình thường, bỗng trở thành điều mình muốn nhớ mãi.' },
@@ -197,8 +206,79 @@ export function TimelineScreen({ items = defaultTimeline }: TimelineScreenProps)
   )
 }
 
+export function FlipbookScreen({ pages = defaultFlipbookPages, onComplete }: FlipbookScreenProps) {
+  const [unlocked, setUnlocked] = useState(false)
+  const [page, setPage] = useState(0)
+  const [holdProgress, setHoldProgress] = useState(0)
+  const [turning, setTurning] = useState(false)
+  const holdTimer = useRef<number | null>(null)
+  const holdStart = useRef(0)
+  const reduceMotion = useReducedMotion()
+
+  function stopHolding() {
+    if (holdTimer.current) window.clearInterval(holdTimer.current)
+    holdTimer.current = null
+    if (!unlocked) setHoldProgress(0)
+  }
+
+  function startHolding() {
+    if (unlocked) return
+    holdStart.current = Date.now()
+    holdTimer.current = window.setInterval(() => {
+      const progress = Math.min(1, (Date.now() - holdStart.current) / 1500)
+      setHoldProgress(progress)
+      if (progress >= 1) {
+        stopHolding()
+        setUnlocked(true)
+      }
+    }, 30)
+  }
+
+  function turn(direction: 1 | -1) {
+    if (!unlocked || turning) return
+    const next = Math.max(0, Math.min(pages.length - 1, page + direction))
+    if (next === page) return
+    setTurning(true)
+    setPage(next)
+    window.setTimeout(() => setTurning(false), reduceMotion ? 0 : 520)
+  }
+
+  return (
+    <main className={`${pacifico.variable} ${playpen.variable} ${vietnam.variable} flipbook-shell`}>
+      <div className="flipbook-orb flipbook-orb-pink" aria-hidden="true" />
+      <div className="flipbook-orb flipbook-orb-blue" aria-hidden="true" />
+      <div className="grain" aria-hidden="true" />
+      <section className={`flipbook-content ${unlocked ? 'is-unlocked' : ''}`} aria-labelledby="flipbook-title">
+        <ProgressSegments active={5} total={5} />
+        {!unlocked ? <>
+          <p className="eyebrow">MỘT ĐIỀU NHỎ DÀNH CHO CẬU</p>
+          <h1 id="flipbook-title">Mở thư của chúng mình</h1>
+          <div className="envelope" aria-label="Phong bì đang khóa">
+            <div className="envelope-flap" />
+            <div className="wax-seal-wrap">
+              <svg className="hold-ring" viewBox="0 0 100 100" aria-hidden="true"><circle className="hold-ring-track" cx="50" cy="50" r="44" /><circle className="hold-ring-progress" cx="50" cy="50" r="44" pathLength="1" style={{ strokeDashoffset: 1 - holdProgress }} /></svg>
+              <button className={`wax-seal ${holdProgress === 1 ? 'is-cracked' : ''}`} type="button" onPointerDown={startHolding} onPointerUp={stopHolding} onPointerLeave={stopHolding} onPointerCancel={stopHolding} aria-label="Nhấn và giữ để mở thư">{holdProgress >= 1 ? 'Mở' : 'Giữ'}</button>
+            </div>
+          </div>
+          <p className="hold-hint">Nhấn và giữ con dấu một chút nhé</p>
+        </> : <motion.div className="book-stage" initial={reduceMotion ? false : { opacity: 0, y: 80 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 150, damping: 18 }}>
+          <p className="eyebrow">NHỮNG TRANG DÀNH CHO CẬU</p>
+          <div className={`book-page ${turning ? 'is-turning' : ''}`} onClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); turn(event.clientX - bounds.left > bounds.width / 2 ? 1 : -1) }} onTouchStart={(event) => { (event.currentTarget as HTMLElement).dataset.touchX = String(event.touches[0].clientX) }} onTouchEnd={(event) => { const start = Number((event.currentTarget as HTMLElement).dataset.touchX); const delta = event.changedTouches[0].clientX - start; if (Math.abs(delta) > 30) turn(delta < 0 ? 1 : -1) }}>
+            <div className="page-image-backdrop" style={pages[page].image ? { backgroundImage: `url(${pages[page].image})` } : undefined} />
+            {pages[page].image ? <img src={pages[page].image} alt={pages[page].alt ?? 'Trang kỷ niệm'} /> : <div className="page-empty">Trang kỷ niệm {page + 1}</div>}
+            <button type="button" className="page-edge page-edge-left" aria-label="Trang trước" onClick={(event) => { event.stopPropagation(); turn(-1) }} />
+            <button type="button" className="page-edge page-edge-right" aria-label="Trang sau" onClick={(event) => { event.stopPropagation(); turn(1) }} />
+          </div>
+          <p className="page-counter">{page + 1} / {pages.length}</p>
+          <button className="text-action" type="button" onClick={onComplete}>Xem xong rồi</button>
+        </motion.div>}
+      </section>
+    </main>
+  )
+}
+
 export default function Page() {
-  return <TimelineScreen />
+  return <FlipbookScreen />
 }
 
 export const designTokens = {
