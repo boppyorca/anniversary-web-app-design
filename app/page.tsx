@@ -277,8 +277,78 @@ export function FlipbookScreen({ pages = defaultFlipbookPages, onComplete }: Fli
   )
 }
 
+type FinaleScreenProps = {
+  onFlipbook?: () => void
+  onRestart?: () => void
+}
+
+const confetti = [
+  { className: 'confetti-one', type: 'circle' },
+  { className: 'confetti-two', type: 'strip' },
+  { className: 'confetti-three', type: 'circle' },
+  { className: 'confetti-four', type: 'strip' },
+  { className: 'confetti-five', type: 'circle' },
+  { className: 'confetti-six', type: 'strip' },
+  { className: 'confetti-seven', type: 'circle' },
+  { className: 'confetti-eight', type: 'strip' },
+]
+
+export function FinaleScreen({ onFlipbook, onRestart }: FinaleScreenProps) {
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [message, setMessage] = useState('')
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle')
+  const reduceMotion = useReducedMotion()
+
+  function sendMessage(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!message.trim() || status !== 'idle') return
+    setStatus('sending')
+    window.setTimeout(() => setStatus('sent'), 900)
+  }
+
+  function closeSheet() {
+    if (status !== 'sending') {
+      setSheetOpen(false)
+      setStatus('idle')
+    }
+  }
+
+  return (
+    <main className={`${pacifico.variable} ${playpen.variable} ${vietnam.variable} finale-shell`}>
+      <div className="finale-blob finale-blob-pink" aria-hidden="true" />
+      <div className="finale-blob finale-blob-blue" aria-hidden="true" />
+      <div className="grain" aria-hidden="true" />
+      <div className="finale-confetti" aria-hidden="true">
+        {confetti.map((item) => <span key={item.className} className={`confetti ${item.className} ${item.type}`} />)}
+      </div>
+      <section className="finale-content" aria-labelledby="finale-title">
+        <p className="eyebrow">MỘT NĂM CỦA CHÚNG MÌNH</p>
+        <div className="finale-number-wrap">
+          <h1 id="finale-title">365</h1>
+          <span>ngày</span>
+        </div>
+        <Button onClick={() => setSheetOpen(true)}>Gửi lại cho anh</Button>
+        <div className="finale-links">
+          <button type="button" onClick={onFlipbook}>Xem lại flipbook</button>
+          <button type="button" onClick={onRestart}>Xem lại từ đầu</button>
+        </div>
+      </section>
+      {sheetOpen && <div className="finale-sheet-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSheet() }}>
+        <motion.section className="finale-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" initial={reduceMotion ? false : { y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 25 }}>
+          <div className="sheet-handle" aria-hidden="true" />
+          {status === 'sent' ? <div className="sent-state"><motion.div className="sent-check" initial={reduceMotion ? false : { scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 250, damping: 16 }} aria-hidden="true">✓</motion.div><h2 id="sheet-title">Đã gửi rồi nhé</h2><button className="sheet-close-text" type="button" onClick={closeSheet}>Đóng</button></div> : <form onSubmit={sendMessage} className="finale-form">
+            <h2 id="sheet-title">Gửi lại cho anh</h2>
+            <textarea value={message} maxLength={1000} onChange={(event) => setMessage(event.target.value)} placeholder="Viết một điều nhỏ nhé" aria-label="Lời nhắn" disabled={status === 'sending'} />
+            <div className="sheet-footer"><span>{message.length}/1000</span><Button type="submit" disabled={!message.trim() || status === 'sending'}>{status === 'sending' ? 'Đang gửi...' : 'Gửi đi'}</Button></div>
+          </form>}
+        </motion.section>
+      </div>}
+    </main>
+  )
+}
+
 export default function Page() {
-  return <FlipbookScreen />
+  return <FinaleScreen />
 }
 
 export const designTokens = {
