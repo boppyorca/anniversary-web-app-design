@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Be_Vietnam_Pro, Pacifico, Playpen_Sans } from 'next/font/google'
 
@@ -43,47 +43,67 @@ export function BottomSheet({ onClose }: { onClose: () => void }) {
   return <div role="dialog" aria-modal="true" className="bottom-sheet"><button onClick={onClose}>Đóng</button></div>
 }
 
+function FlipCell({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="counter-unit">
+      <div className="flip-cell" aria-label={`${value} ${label}`}><span>{value}</span></div>
+      <span className="counter-label">{label}</span>
+    </div>
+  )
+}
+
 export default function Page() {
-  const [date, setDate] = useState('')
-  const [status, setStatus] = useState<'idle' | 'wrong' | 'success'>('idle')
+  const [days, setDays] = useState(0)
+  const [elapsed, setElapsed] = useState(0)
   const reduceMotion = useReducedMotion()
 
-  function unlock() {
-    if (date.trim() === '14/02/2024') setStatus('success')
-    else setStatus('wrong')
-  }
+  useEffect(() => {
+    if (reduceMotion) {
+      setDays(360)
+      return
+    }
+    let frame = 0
+    const started = performance.now()
+    const count = (now: number) => {
+      const progress = Math.min((now - started) / 1800, 1)
+      setDays(Math.round(360 * (1 - Math.pow(1 - progress, 3))))
+      if (progress < 1) frame = requestAnimationFrame(count)
+    }
+    frame = requestAnimationFrame(count)
+    return () => cancelAnimationFrame(frame)
+  }, [reduceMotion])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setElapsed((value) => value + 1), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const hours = String(Math.floor(elapsed / 3600) % 24).padStart(2, '0')
+  const minutes = String(Math.floor(elapsed / 60) % 60).padStart(2, '0')
+  const seconds = String(elapsed % 60).padStart(2, '0')
+  const complete = days === 360
 
   return (
-    <main className={`${pacifico.variable} ${playpen.variable} ${vietnam.variable} gate-shell ${status === 'success' ? 'gate-success' : ''}`}>
-      <div className="blob blob-pink" aria-hidden="true" />
-      <div className="blob blob-blue" aria-hidden="true" />
-      <div className="blob blob-pink-secondary" aria-hidden="true" />
+    <main className={`${pacifico.variable} ${playpen.variable} ${vietnam.variable} counter-shell`}>
+      <div className="drift-circle drift-circle-pink" aria-hidden="true" />
+      <div className="drift-circle drift-circle-blue" aria-hidden="true" />
+      <div className="drift-circle drift-circle-cream" aria-hidden="true" />
       <div className="grain" aria-hidden="true" />
-      <section className="gate-content" aria-labelledby="gate-title">
-        <ProgressSegments active={1} total={5} />
-        <div className="gate-heading">
-          <p className="eyebrow">MỘT NGÀY RẤT ĐẶC BIỆT</p>
-          <h1 id="gate-title">Ngày mình bắt đầu là ngày nào?</h1>
-          <p className="gate-hint">Nhập ngày đầu tiên của chúng mình để mở khóa kỷ niệm.</p>
+      <section className="counter-content" aria-labelledby="counter-title">
+        <ProgressSegments active={2} total={5} />
+        <div className="counter-heading">
+          <p className="eyebrow">CHÚNG MÌNH ĐÃ CÙNG NHAU</p>
+          <h1 id="counter-title"><span>{days}</span> ngày</h1>
+          <p>và vẫn đang tiếp tục viết thêm những ngày thật đẹp.</p>
         </div>
-        <form className={`gate-form ${status === 'wrong' ? 'is-wrong' : ''} ${status === 'success' ? 'is-success' : ''}`} onSubmit={(event) => { event.preventDefault(); unlock() }}>
-          <label className="date-field">
-            <span className="sr-only">Ngày bắt đầu, định dạng ngày tháng năm</span>
-            <input
-              aria-describedby={status === 'wrong' ? 'date-error' : undefined}
-              aria-invalid={status === 'wrong'}
-              autoComplete="off"
-              inputMode="numeric"
-              maxLength={10}
-              placeholder="dd/mm/yyyy"
-              value={date}
-              onChange={(event) => { setDate(event.target.value); if (status === 'wrong') setStatus('idle') }}
-            />
-          </label>
-          {status === 'wrong' && <p id="date-error" className="date-error" role="alert">Chưa đúng rồi, thử lại nhé</p>}
-          {status !== 'success' && <Button type="submit">Mở khóa</Button>}
-        </form>
-        {status === 'success' && <motion.p className="success-message" initial={reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 180, damping: 22 }}>Đúng rồi. Mình cùng bước tiếp nhé.</motion.p>}
+        <div className="counter-clock" aria-label={`${hours} giờ, ${minutes} phút, ${seconds} giây`}>
+          <FlipCell value={hours} label="giờ" />
+          <FlipCell value={minutes} label="phút" />
+          <FlipCell value={seconds} label="giây" />
+        </div>
+        <motion.div className="counter-action" initial={false} animate={{ opacity: complete ? 1 : 0, y: complete ? 0 : 12 }} transition={{ type: 'spring', stiffness: 170, damping: 22 }}>
+          <Button onClick={() => undefined}>Tiếp tục</Button>
+        </motion.div>
       </section>
     </main>
   )
