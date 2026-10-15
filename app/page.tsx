@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Be_Vietnam_Pro, Pacifico, Playpen_Sans } from 'next/font/google'
 
 const pacifico = Pacifico({ subsets: ['vietnamese', 'latin'], weight: '400', variable: '--font-pacifico' })
@@ -50,8 +50,6 @@ export function VideoScreen({ videoSrc }: VideoScreenProps) {
   const [ended, setEnded] = useState(false)
   const [playing, setPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const reduceMotion = useReducedMotion()
-
   useEffect(() => {
     if (!videoSrc) return
     const timer = window.setTimeout(() => setCanSkip(true), 5000)
@@ -67,7 +65,7 @@ export function VideoScreen({ videoSrc }: VideoScreenProps) {
         <ProgressSegments active={3} total={5} />
         <p className="eyebrow">MỘT THƯỚC PHIM NHỎ</p>
         <h1 id="video-title">Những ngày mình bên nhau</h1>
-        <motion.div className="polaroid" initial={reduceMotion ? false : { opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 180, damping: 22 }}>
+        <motion.div className="polaroid" initial={false} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 180, damping: 22 }}>
           <div className={`video-frame ${!videoSrc ? 'video-placeholder' : ''}`}>
             {videoSrc ? <video ref={videoRef} src={videoSrc} controls={false} onPlay={() => setPlaying(true)} onEnded={() => { setPlaying(false); setEnded(true) }} aria-label="Video kỷ niệm" /> : <span>Đang chuẩn bị</span>}
             {videoSrc && !playing && !ended && <button className="play-button" type="button" aria-label="Phát video" onClick={() => { void videoRef.current?.play() }}>Phát</button>}
