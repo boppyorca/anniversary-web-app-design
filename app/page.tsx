@@ -8,7 +8,7 @@ const pacifico = Pacifico({ subsets: ['vietnamese', 'latin'], weight: '400', var
 const playpen = Playpen_Sans({ subsets: ['vietnamese', 'latin'], variable: '--font-playpen' })
 const vietnam = Be_Vietnam_Pro({ subsets: ['vietnamese', 'latin'], weight: '400', variable: '--font-vietnam' })
 
-export function Button({ children, onClick, type = 'button' }: { children: React.ReactNode; onClick?: () => void; type?: 'button' | 'submit' }) {
+export function Button({ children, onClick, type = 'button', disabled = false }: { children: React.ReactNode; onClick?: () => void; type?: 'button' | 'submit'; disabled?: boolean }) {
   return (
     <motion.button
       type={type}
@@ -16,6 +16,7 @@ export function Button({ children, onClick, type = 'button' }: { children: React
       whileTap={{ scale: 0.97 }}
       transition={{ type: 'spring', stiffness: 420, damping: 24 }}
       onClick={onClick}
+      disabled={disabled}
     >
       {children}
     </motion.button>
@@ -44,6 +45,20 @@ export function BottomSheet({ onClose }: { onClose: () => void }) {
 }
 
 type VideoScreenProps = { videoSrc?: string }
+
+type QuizScreenProps = {
+  questions?: [string, string, string]
+  reactions?: [string, string, string]
+  onComplete?: () => void
+}
+
+const defaultQuestions: [string, string, string] = [
+  'Điều gì ở mình khiến cậu mỉm cười?',
+  'Kỷ niệm nào cậu muốn giữ mãi?',
+  'Cậu mong chúng mình sẽ cùng nhau đi đâu?',
+]
+
+const defaultReactions: [string, string, string] = ['Dịu dàng quá', 'Mình cũng nhớ', 'Nhất định nhé']
 
 export function VideoScreen({ videoSrc }: VideoScreenProps) {
   const [canSkip, setCanSkip] = useState(false)
@@ -83,8 +98,47 @@ export function VideoScreen({ videoSrc }: VideoScreenProps) {
   )
 }
 
+export function QuizScreen({ questions = defaultQuestions, reactions = defaultReactions, onComplete }: QuizScreenProps) {
+  const [step, setStep] = useState(0)
+  const [answer, setAnswer] = useState('')
+  const [pieces, setPieces] = useState<string[]>([])
+  const reduceMotion = useReducedMotion()
+  const isComplete = step === 3
+
+  function submitAnswer(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!answer.trim()) return
+    setPieces((current) => [...current, reactions[step]])
+    setAnswer('')
+    setStep((current) => current + 1)
+  }
+
+  return (
+    <main className={`${pacifico.variable} ${playpen.variable} ${vietnam.variable} quiz-shell`}>
+      <div className="quiz-orb quiz-orb-one" aria-hidden="true" />
+      <div className="quiz-orb quiz-orb-two" aria-hidden="true" />
+      <div className="quiz-orb quiz-orb-three" aria-hidden="true" />
+      <div className="grain" aria-hidden="true" />
+      <section className="quiz-content" aria-labelledby="quiz-title">
+        <ProgressSegments active={isComplete ? 3 : step + 1} total={3} />
+        <div className="quiz-piece-area" aria-live="polite">
+          {pieces.map((piece, index) => <motion.span key={`${piece}-${index}`} className={`quiz-piece quiz-piece-${index + 1}`} initial={reduceMotion ? false : { opacity: 0, y: 42, scale: .7 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 180, damping: 16 }}>{piece}</motion.span>)}
+          {isComplete && <motion.span className="heart-outline" initial={reduceMotion ? false : { opacity: 0, scale: .5 }} animate={{ opacity: 1, scale: 1 }} aria-label="Ba mảnh ghép đã hoàn thành">♡</motion.span>}
+        </div>
+        {!isComplete ? <motion.form key={step} className="quiz-card" initial={reduceMotion ? false : { opacity: 0, x: 55 }} animate={{ opacity: 1, x: 0 }} transition={{ type: 'spring', stiffness: 230, damping: 24 }} onSubmit={submitAnswer}>
+          <p className="eyebrow">CÂU HỎI {step + 1} / 3</p>
+          <h1 id="quiz-title">{questions[step]}</h1>
+          {step === 0 && <div className="quick-picks" aria-label="Gợi ý nhanh">{['Nụ cười', 'Sự dịu dàng', 'Cách cậu lắng nghe'].map((pick) => <button type="button" key={pick} className={`quick-chip ${answer === pick ? 'is-selected' : ''}`} onClick={() => setAnswer(pick)}>{pick}</button>)}</div>}
+          {step === 0 ? <input className="quiz-input" value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Viết điều cậu nghĩ nhé" aria-label="Câu trả lời" /> : <textarea className="quiz-input quiz-textarea" maxLength={500} value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Cứ viết thật lòng nhé" aria-label="Câu trả lời" />}
+          <div className="quiz-card-footer"><span>{step > 0 ? `${answer.length}/500` : 'Một câu ngắn thôi cũng được'}</span><Button type="submit" disabled={!answer.trim()}>Trả lời</Button></div>
+        </motion.form> : <motion.div className="quiz-complete" initial={reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}><p className="eyebrow">MÌNH HIỂU NHAU HƠN MỘT CHÚT</p><h1 id="quiz-title">Cảm ơn cậu đã trả lời</h1><Button onClick={onComplete}>Tiếp tục</Button></motion.div>}
+      </section>
+    </main>
+  )
+}
+
 export default function Page() {
-  return <VideoScreen />
+  return <QuizScreen />
 }
 
 export const designTokens = {
