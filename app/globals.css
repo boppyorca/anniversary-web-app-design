@@ -91,3 +91,27 @@ button { cursor:pointer; }
 .quiz-orb-three { width:76px; height:76px; left:44%; bottom:-25px; background:var(--pink-100); animation-delay:-13s; }
 @keyframes quiz-rise { 50% { transform:translate3d(11px,-150px,0); } 100% { transform:translate3d(-15px,-320px,0); } }
 @media (min-width:600px) { .quiz-shell { min-height:calc(100svh - 48px); margin:24px auto; width:min(100% - 48px,430px); border-radius:34px; box-shadow:0 24px 80px rgba(130,85,110,.12); } }
+.timeline-shell { min-height:100svh; overflow:hidden; isolation:isolate; position:relative; padding:28px 20px 70px; background:linear-gradient(160deg,var(--pink-50),var(--blue-50)); font-family:var(--font-vietnam),sans-serif; }
+.timeline-content { position:relative; z-index:2; width:min(100%,430px); margin:0 auto; }
+.timeline-content > .progress-segments { width:100%; max-width:300px; margin:0 auto 28px; }
+.timeline-content > .eyebrow { text-align:center; }
+.timeline-content > h1 { margin:0 auto 34px; text-align:center; font:400 clamp(32px,8vw,42px)/1.12 var(--font-pacifico),cursive; letter-spacing:-.035em; }
+.timeline-track { position:relative; }
+.timeline-line { position:absolute; top:0; bottom:0; left:19px; width:2px; overflow:hidden; background:color-mix(in srgb,var(--pink-300) 35%,transparent); }
+.timeline-line span { display:block; width:100%; background:var(--pink-500); transition:height .25s ease-out; }
+.timeline-list { display:flex; flex-direction:column; gap:24px; padding:0 0 24px 42px; }
+.timeline-card { position:relative; padding:22px 20px 24px; border:1px solid rgba(255,255,255,.72); border-radius:28px 28px 24px 24px; box-shadow:0 18px 34px rgba(160,115,145,.13); transform:rotate(-1.1deg); }
+.timeline-card:nth-child(even) { transform:rotate(1.1deg); }
+.timeline-card::before { content:''; position:absolute; top:29px; left:-30px; width:12px; height:12px; border:3px solid var(--pink-500); border-radius:50%; background:var(--cream); box-shadow:0 0 0 5px color-mix(in srgb,var(--pink-100) 70%,transparent); }
+.timeline-card-pink { background:color-mix(in srgb,var(--pink-100) 72%,var(--cream)); }
+.timeline-card-blue { background:color-mix(in srgb,var(--blue-100) 75%,var(--cream)); }
+.timeline-date { margin:0 0 10px; color:var(--pink-500); font:400 17px/1.2 var(--font-playpen),cursive; }
+.timeline-card h2 { margin:0 0 8px; font-size:20px; line-height:1.25; }
+.timeline-text { margin:0; color:var(--ink-soft); font-size:14px; line-height:1.7; }
+.timeline-card img { display:block; width:100%; margin-top:16px; border-radius:18px; object-fit:cover; }
+.timeline-orb { position:fixed; z-index:-1; border-radius:999px; filter:blur(44px); opacity:.45; pointer-events:none; will-change:transform; animation:timeline-drift 18s ease-in-out infinite alternate; }
+.timeline-orb-pink { width:210px; height:210px; top:18%; right:-100px; background:var(--pink-300); }
+.timeline-orb-blue { width:240px; height:240px; bottom:10%; left:-130px; background:var(--blue-300); animation-delay:-8s; }
+@keyframes timeline-drift { to { transform:translate3d(18px,-34px,0) scale(1.08); } }
+@media (min-width:600px) { .timeline-shell { min-height:calc(100svh - 48px); margin:24px auto; width:min(100% - 48px,430px); border-radius:34px; box-shadow:0 24px 80px rgba(130,85,110,.12); } }
+@media (prefers-reduced-motion:reduce) { .timeline-line span { transition:none; } }

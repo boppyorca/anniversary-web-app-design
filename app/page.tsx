@@ -52,6 +52,22 @@ type QuizScreenProps = {
   onComplete?: () => void
 }
 
+type TimelineItem = {
+  date: string
+  title: string
+  text: string
+  photo?: string
+}
+
+type TimelineScreenProps = { items?: TimelineItem[] }
+
+const defaultTimeline: TimelineItem[] = [
+  { date: '14.02.2024', title: 'Ngày đầu tiên', text: 'Mình đã bắt đầu câu chuyện dịu dàng này bằng một nụ cười thật lâu.' },
+  { date: '03.03.2024', title: 'Buổi hẹn đầu', text: 'Một buổi chiều rất bình thường, bỗng trở thành điều mình muốn nhớ mãi.' },
+  { date: '22.06.2024', title: 'Cùng nhau lớn lên', text: 'Tụi mình học cách lắng nghe, nhường nhịn và thương nhau nhiều hơn.' },
+  { date: 'Hôm nay', title: 'Vẫn là chúng mình', text: 'Cảm ơn cậu vì đã ở đây. Phần đẹp nhất vẫn đang được viết tiếp.' },
+]
+
 const defaultQuestions: [string, string, string] = [
   'Điều gì ở mình khiến cậu mỉm cười?',
   'Kỷ niệm nào cậu muốn giữ mãi?',
@@ -137,8 +153,52 @@ export function QuizScreen({ questions = defaultQuestions, reactions = defaultRe
   )
 }
 
+export function TimelineScreen({ items = defaultTimeline }: TimelineScreenProps) {
+  const [progress, setProgress] = useState(0)
+  const reduceMotion = useReducedMotion()
+  const trackRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function updateProgress() {
+      const track = trackRef.current
+      if (!track) return
+      const bounds = track.getBoundingClientRect()
+      const viewport = window.innerHeight
+      const distance = Math.max(track.offsetHeight - viewport * 0.48, 1)
+      setProgress(Math.min(1, Math.max(0, (viewport * 0.52 - bounds.top) / distance)))
+    }
+    updateProgress()
+    window.addEventListener('scroll', updateProgress, { passive: true })
+    return () => window.removeEventListener('scroll', updateProgress)
+  }, [])
+
+  return (
+    <main className={`${pacifico.variable} ${playpen.variable} ${vietnam.variable} timeline-shell`}>
+      <div className="timeline-orb timeline-orb-pink" aria-hidden="true" />
+      <div className="timeline-orb timeline-orb-blue" aria-hidden="true" />
+      <div className="grain" aria-hidden="true" />
+      <section className="timeline-content" aria-labelledby="timeline-title">
+        <ProgressSegments active={5} total={5} />
+        <p className="eyebrow">NHỮNG TRANG MÌNH ĐÃ VIẾT</p>
+        <h1 id="timeline-title">Chuyện của chúng mình</h1>
+        <div className="timeline-track" ref={trackRef}>
+          <div className="timeline-line" aria-hidden="true"><span style={{ height: `${progress * 100}%` }} /></div>
+          <div className="timeline-list">
+            {items.map((item, index) => <motion.article key={`${item.date}-${item.title}`} className={`timeline-card timeline-card-${index % 2 === 0 ? 'pink' : 'blue'}`} initial={reduceMotion ? false : { opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .22 }} transition={{ type: 'spring', stiffness: 150, damping: 20 }}>
+              <p className="timeline-date">{item.date}</p>
+              <h2>{item.title}</h2>
+              <p className="timeline-text">{item.text}</p>
+              {item.photo && <img src={item.photo} alt={`Kỷ niệm ${item.title}`} />}
+            </motion.article>)}
+          </div>
+        </div>
+      </section>
+    </main>
+  )
+}
+
 export default function Page() {
-  return <QuizScreen />
+  return <TimelineScreen />
 }
 
 export const designTokens = {
