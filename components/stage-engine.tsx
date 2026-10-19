@@ -1,0 +1,213 @@
+'use client'
+
+import React, { useEffect, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
+import { STAGES, STAGE_IDS, type StageId, type ProgressState, loadProgress, saveProgress } from '@/lib/progress'
+import { createSession, trackEvent } from '@/lib/api'
+import { AppBackground } from './app-background'
+import { ProgressSegments } from './progress-segments'
+import { StageTransition, GradientWipe } from './stage-transition'
+
+import { GateStage } from './stages/gate'
+import { CounterStage } from './stages/counter'
+import { VideoStage } from './stages/video'
+import { QuizStage } from './stages/quiz'
+import { TimelineStage } from './stages/timeline'
+import { FlipbookStage } from './stages/flipbook'
+import { FinaleStage } from './stages/finale'
+
+export function StageEngine() {
+  const [progress, setProgress] = useState<ProgressState>({ index: 0, unlocked: 0 })
+  const [hydrated, setHydrated] = useState(false)
+  const [wipeActive, setWipeActive] = useState(false)
+  const [isDev, setIsDev] = useState(false)
+
+  // Hydrate progress from localStorage safely on mount
+  useEffect(() => {
+    const saved = loadProgress()
+    setProgress(saved)
+    setHydrated(true)
+    createSession()
+    trackEvent('session_init', STAGES[saved.index].id, { resumedStage: saved.index })
+
+    // Check dev helper token
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const devParam = params.get('dev')
+      const expectedToken = process.env.NEXT_PUBLIC_DEV_TOKEN
+      if (devParam && expectedToken && devParam === expectedToken) {
+        setIsDev(true)
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // Preload next stage's dynamic chunk during idle
+  useEffect(() => {
+    if (!hydrated) return
+    const nextIndex = progress.index + 1
+    if (nextIndex >= STAGES.length) return
+
+    const idleCallback =
+      typeof window.requestIdleCallback === 'function'
+        ? window.requestIdleCallback
+        : (cb: () => void) => setTimeout(cb, 1000)
+
+    const handle = idleCallback(() => {
+      const nextStage = STAGES[nextIndex].id
+      switch (nextStage) {
+        case 'counter':
+          void import('./stages/counter')
+          break
+        case 'video':
+          void import('./stages/video')
+          break
+        case 'quiz':
+          void import('./stages/quiz')
+          break
+        case 'timeline':
+          void import('./stages/timeline')
+          break
+        case 'flipbook':
+          void import('./stages/flipbook')
+          break
+        case 'finale':
+          void import('./stages/finale')
+          break
+      }
+    })
+
+    return () => {
+      if (typeof window.cancelIdleCallback === 'function' && typeof handle === 'number') {
+        window.cancelIdleCallback(handle)
+      }
+    }
+  }, [hydrated, progress.index])
+
+  function triggerWipe() {
+    setWipeActive(true)
+    setTimeout(() => {
+      setWipeActive(false)
+    }, 550)
+  }
+
+  function handleNext() {
+    const nextIdx = Math.min(progress.index + 1, STAGES.length - 1)
+    const nextUnlocked = Math.max(progress.unlocked, nextIdx)
+    const nextState = { index: nextIdx, unlocked: nextUnlocked }
+    setProgress(nextState)
+    saveProgress(nextState)
+    triggerWipe()
+    trackEvent('stage_advance', STAGES[nextIdx].id, { toStage: nextIdx })
+  }
+
+  function handleGoTo(idx: number) {
+    if (idx <= progress.unlocked && idx !== progress.index) {
+      const nextState = { ...progress, index: idx }
+      setProgress(nextState)
+      saveProgress(nextState)
+      triggerWipe()
+      trackEvent('stage_jump', STAGES[idx].id, { toStage: idx })
+    }
+  }
+
+  function handleReset() {
+    // Reset returns to index 1 (counter) without re-locking the gate, keeping answers
+    const nextUnlocked = Math.max(progress.unlocked, 1)
+    const nextState = { index: 1, unlocked: nextUnlocked }
+    setProgress(nextState)
+    saveProgress(nextState)
+    triggerWipe()
+    trackEvent('stage_reset', 'counter')
+  }
+
+  const currentStageId = STAGES[progress.index]?.id || 'gate'
+
+  // Render only background until progress is restored to prevent flash of wrong stage
+  if (!hydrated) {
+    return (
+      <main className="relative min-h-[100svh] w-full flex flex-col justify-between">
+        <AppBackground currentStage="gate" />
+      </main>
+    )
+  }
+
+  return (
+    <main className="relative min-h-[100svh] w-full flex flex-col justify-between overflow-x-hidden">
+      {/* 1. Persistent crossfading background (outside AnimatePresence) */}
+      <AppBackground currentStage={currentStageId} />
+
+      {/* 2. Full-screen pastel gradient wipe during stage swap */}
+      <GradientWipe active={wipeActive} />
+
+      {/* 3. Top Progress Nav: 7 segments */}
+      <header className="w-full pt-4 pb-2 px-4 z-30">
+        <ProgressSegments
+          currentIndex={progress.index}
+          unlockedIndex={progress.unlocked}
+          onSelectStage={handleGoTo}
+        />
+      </header>
+
+      {/* 4. Active Stage within AnimatePresence */}
+      <div className="flex-1 w-full flex flex-col items-center justify-center relative z-20">
+        <AnimatePresence mode="wait" initial={false}>
+          <StageTransition key={currentStageId} stageKey={currentStageId}>
+            {currentStageId === 'gate' && <GateStage onComplete={handleNext} />}
+            {currentStageId === 'counter' && <CounterStage onComplete={handleNext} />}
+            {currentStageId === 'video' && <VideoStage onComplete={handleNext} />}
+            {currentStageId === 'quiz' && <QuizStage onComplete={handleNext} />}
+            {currentStageId === 'timeline' && <TimelineStage onComplete={handleNext} />}
+            {currentStageId === 'flipbook' && <FlipbookStage onComplete={handleNext} />}
+            {currentStageId === 'finale' && (
+              <FinaleStage
+                onComplete={handleNext}
+                onGoToStage={handleGoTo}
+                onResetJourney={handleReset}
+              />
+            )}
+          </StageTransition>
+        </AnimatePresence>
+      </div>
+
+      {/* Dev helper: only shown when ?dev=<token> matches NEXT_PUBLIC_DEV_TOKEN */}
+      {isDev && (
+        <aside
+          className="fixed bottom-3 right-3 z-50 bg-cream/95 border border-pink-300 rounded-xl p-2.5 shadow-lg flex items-center gap-2 text-xs"
+          aria-label="Development helper"
+        >
+          <label htmlFor="dev-stage-select" className="font-semibold text-ink">
+            Dev:
+          </label>
+          <select
+            id="dev-stage-select"
+            value={progress.index}
+            onChange={(e) => {
+              const idx = Number(e.target.value)
+              const nextUnlocked = Math.max(progress.unlocked, idx)
+              const nextState = { index: idx, unlocked: nextUnlocked }
+              setProgress(nextState)
+              saveProgress(nextState)
+              triggerWipe()
+            }}
+            className="rounded border border-pink-300 bg-white p-1 text-xs text-ink"
+          >
+            {STAGES.map((s, i) => (
+              <option key={s.id} value={i}>
+                {i + 1}. {s.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="rounded bg-pink-100 px-2 py-1 text-pink-500 font-bold hover:bg-pink-300 hover:text-ink"
+          >
+            Reset
+          </button>
+        </aside>
+      )}
+    </main>
+  )
+}

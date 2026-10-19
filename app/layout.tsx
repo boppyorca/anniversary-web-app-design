@@ -1,11 +1,34 @@
-import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { Be_Vietnam_Pro, Pacifico, Playpen_Sans } from 'next/font/google'
 import './globals.css'
+
+const vietnam = Be_Vietnam_Pro({
+  subsets: ['vietnamese', 'latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-vietnam',
+  display: 'swap',
+})
+
+const pacifico = Pacifico({
+  subsets: ['vietnamese', 'latin'],
+  weight: '400',
+  variable: '--font-pacifico',
+  display: 'swap',
+})
+
+const playpen = Playpen_Sans({
+  subsets: ['vietnamese', 'latin'],
+  variable: '--font-playpen',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Thương — Những ngày của chúng mình',
   description: 'Một góc nhỏ để cất giữ những điều thật đẹp của hai đứa.',
-  generator: 'v0.app',
+  robots: {
+    index: false,
+    follow: false,
+  },
   icons: {
     icon: [
       {
@@ -26,11 +49,9 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light dark',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' },
-  ],
+  colorScheme: 'light',
+  themeColor: '#FFF6F9',
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({
@@ -39,10 +60,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="vi">
+    <html lang="vi" className={`${vietnam.variable} ${pacifico.variable} ${playpen.variable}`}>
       <body className="antialiased">
         {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   )

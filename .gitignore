@@ -14,3 +14,15 @@ __v0_jsx-dev-runtime.ts
 node_modules
 .next/
 .DS_Store
+
+# Video source
+video-source/
+
+# Flipbook source
+flipbook-source/
+
+# Build & test outputs
+tsconfig.tsbuildinfo
+test-results/
+playwright-report/
+.agent/
