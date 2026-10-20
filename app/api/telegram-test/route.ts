@@ -47,9 +47,13 @@ export async function GET() {
     if (!res.ok || !data.ok) {
       let advice = 'Kiểm tra lại cấu hình Telegram.'
       if (data.error_code === 403) {
-        advice = 'BẠN CHƯA BẤM START TRONG BOT: Hãy mở cuộc trò chuyện với bot trên Telegram và bấm nút "Start" để cho phép bot gửi tin nhắn cho bạn.'
+        advice = 'BẠN ĐÃ CHẶN BOT: Hãy bỏ chặn bot trên Telegram để bot có thể gửi tin nhắn.'
       } else if (data.error_code === 400) {
-        advice = 'CHAT_ID KHÔNG HỢP LỆ: Chat ID phải là dãy số nguyên (ví dụ: 123456789 từ @userinfobot), KHÔNG được dùng tên @username.'
+        if (data.description?.includes('chat not found')) {
+          advice = 'BẠN CHƯA BẤM START TRONG BOT: Telegram quy định bot không thể chủ động nhắn trước. Bạn hãy tìm Username con Bot của bạn trên Telegram và bấm nút "START" (hoặc gửi /start). Sau đó tải lại trang này.'
+        } else {
+          advice = 'CHAT_ID KHÔNG HỢP LỆ: Chat ID phải là dãy số nguyên (ví dụ: 123456789 từ @userinfobot), KHÔNG được dùng tên @username.'
+        }
       } else if (data.error_code === 401) {
         advice = 'BOT_TOKEN KHÔNG ĐÚNG: Hãy kiểm tra và copy chính xác token được cấp từ @BotFather.'
       }
