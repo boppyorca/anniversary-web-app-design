@@ -5,9 +5,10 @@ test.describe('E2E: Flipbook Stage Verification (390x844)', () => {
     // 1. Navigate to localhost
     await page.goto('/')
 
-    // 2. Jump directly to flipbook stage via localStorage
+    // 2. Jump directly to flipbook stage via session & localStorage
     await page.evaluate(() => {
       localStorage.setItem('anniv:v1:progress', JSON.stringify({ index: 5, unlocked: 5 }))
+      sessionStorage.setItem('anniv:v1:session_stage', '5')
       sessionStorage.removeItem('anniv:v1:flip-pos')
       location.reload()
     })
@@ -37,10 +38,9 @@ test.describe('E2E: Flipbook Stage Verification (390x844)', () => {
     const nextBtn = page.locator('button:has-text("Sau →")')
 
     for (let sheet = 2; sheet <= 18; sheet++) {
-      await nextBtn.click({ force: true })
-      // Wait for turning animation and lock to release (650ms)
+      await page.keyboard.press('ArrowRight')
+      await expect(counter).toHaveText(`${sheet} / 18`, { timeout: 5000 })
       await page.waitForTimeout(700)
-      await expect(counter).toHaveText(`${sheet} / 18`, { timeout: 3000 })
     }
 
     // 7. Verify sheet 18 (Back Cover)
@@ -48,9 +48,29 @@ test.describe('E2E: Flipbook Stage Verification (390x844)', () => {
 
     // 8. Click "Xem xong rồi" and assert transition to Finale stage
     const finishBtn = page.locator('button:has-text("Xem xong rồi")')
-    await finishBtn.click()
+    await finishBtn.click({ force: true })
 
     // Should transition to Finale stage (index 6)
     await expect(page.locator('text=HÀNH TRÌNH CỦA CHÚNG MÌNH')).toBeVisible({ timeout: 5000 })
+  })
+
+  test('fresh visit to root / always starts at Gate stage even if localStorage has progress', async ({ page }) => {
+    await page.goto('/')
+
+    // Simulate returning visitor where localStorage previously had flipbook unlocked
+    await page.evaluate(() => {
+      localStorage.setItem('anniv:v1:progress', JSON.stringify({ index: 5, unlocked: 5 }))
+      sessionStorage.clear()
+      location.reload()
+    })
+
+    // Verify Gate stage is displayed
+    const unlockBtn = page.locator('button:has-text("Mở khóa")')
+    await expect(unlockBtn).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('input[placeholder*="YYYY"], input[placeholder*="yyyy"]')).toBeVisible()
+
+    // Verify Flipbook stage is NOT displayed
+    await expect(page.locator('button.wax-seal')).not.toBeVisible()
+    await expect(page.locator('p.page-counter')).not.toBeVisible()
   })
 })
