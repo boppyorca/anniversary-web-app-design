@@ -21,17 +21,11 @@ async function executeHttpCall(
   method: string,
   payload: unknown
 ): Promise<boolean> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE
-
-  if (!baseUrl) {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug(`[API offline/no-base] ${method} ${endpoint}`, payload)
-    }
-    return true
-  }
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE || ''
+  const apiPath = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`
+  const url = baseUrl ? `${baseUrl.replace(/\/+$/, '')}${apiPath}` : apiPath
 
   try {
-    const url = `${baseUrl.replace(/\/+$/, '')}${endpoint}`
     const response = await fetch(url, {
       method,
       headers: {
@@ -40,7 +34,10 @@ async function executeHttpCall(
       body: JSON.stringify(payload),
     })
     return response.ok
-  } catch {
+  } catch (err) {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`[API offline/fallback] ${method} ${url}`, err)
+    }
     return false
   }
 }
@@ -78,6 +75,17 @@ export function saveAnswer(
   answerText: string
 ): void {
   const sessionId = getSessionId()
+  // Save local backup copy on client
+  if (typeof window !== 'undefined') {
+    try {
+      const prev = JSON.parse(localStorage.getItem('anniv:v1:quiz_answers') || '{}')
+      prev[questionKey] = { answerText, timestamp: Date.now() }
+      localStorage.setItem('anniv:v1:quiz_answers', JSON.stringify(prev))
+    } catch {
+      // ignore
+    }
+  }
+
   fireAndForget('/answers', 'PUT', {
     sessionId,
     questionKey,
@@ -106,6 +114,18 @@ export function trackEvent(
 
 export function sendFinalReply(message: string, choice?: string): void {
   const sessionId = getSessionId()
+  // Save local backup copy on client
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(
+        'anniv:v1:last_reply',
+        JSON.stringify({ message, choice, timestamp: Date.now() })
+      )
+    } catch {
+      // ignore
+    }
+  }
+
   fireAndForget('/final-reply', 'POST', {
     sessionId,
     message,
