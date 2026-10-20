@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { sendTelegramNotification, escapeHtml } from '@/lib/telegram'
+import { sendDiscordNotification } from '@/lib/discord'
 import { content } from '@/content/content'
 
 export async function PUT(request: Request) {
@@ -25,8 +26,20 @@ export async function PUT(request: Request) {
       year: 'numeric',
     })
 
-    const text = `✨ <b>CÂU TRẢ LỜI QUIZ TỪ BẠN GÁI</b>\n\n❓ <b>Câu hỏi:</b> ${escapeHtml(questionTitle)}\n💬 <b>Em trả lời:</b> "${escapeHtml(answerText)}"\n\n⏰ <i>${timeString}</i>`
+    // 1. Send to Discord
+    await sendDiscordNotification({
+      title: '✨ Câu Trả Lời Quiz Từ Bạn Gái',
+      color: 7251686, // Blue #6EA6E6
+      fields: [
+        { name: '❓ Câu hỏi', value: questionTitle },
+        { name: '💬 Câu trả lời', value: `"${answerText}"` },
+        { name: '⏰ Thời gian', value: timeString, inline: true },
+      ],
+      footerText: 'Anniversary Web App 💖',
+    })
 
+    // 2. Send to Telegram
+    const text = `✨ <b>CÂU TRẢ LỜI QUIZ TỪ BẠN GÁI</b>\n\n❓ <b>Câu hỏi:</b> ${escapeHtml(questionTitle)}\n💬 <b>Em trả lời:</b> "${escapeHtml(answerText)}"\n\n⏰ <i>${timeString}</i>`
     await sendTelegramNotification(text)
 
     return NextResponse.json({ success: true, timestamp: Date.now() })

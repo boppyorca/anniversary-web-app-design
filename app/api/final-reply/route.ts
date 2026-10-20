@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { sendTelegramNotification, escapeHtml } from '@/lib/telegram'
+import { sendDiscordNotification } from '@/lib/discord'
 
 export async function POST(request: Request) {
   try {
@@ -19,13 +20,26 @@ export async function POST(request: Request) {
       year: 'numeric',
     })
 
-    const text = `💌 <b>LỜI NHẮN MỚI TỪ BẠN GÁI (KỶ NIỆM)</b>\n\n"${escapeHtml(message)}"\n\n⏰ <i>Gửi lúc: ${timeString}</i>\n📱 <i>Phiên duyệt: ${escapeHtml(String(body.sessionId || 'Ẩn danh'))}</i>`
+    // 1. Send to Discord Webhook (if DISCORD_WEBHOOK_URL is configured)
+    const discordSent = await sendDiscordNotification({
+      title: '💌 Lời Nhắn Mới Từ Bạn Gái (Kỷ Niệm)',
+      description: `**"${message}"**`,
+      color: 15892389, // Pink
+      fields: [
+        { name: '⏰ Thời gian', value: timeString, inline: true },
+        { name: '📱 Phiên duyệt', value: String(body.sessionId || 'Ẩn danh'), inline: true },
+      ],
+      footerText: 'Anniversary Web App 💖',
+    })
 
-    const sent = await sendTelegramNotification(text)
+    // 2. Send to Telegram (if TELEGRAM_BOT_TOKEN & CHAT_ID are configured)
+    const telegramText = `💌 <b>LỜI NHẮN MỚI TỪ BẠN GÁI (KỶ NIỆM)</b>\n\n"${escapeHtml(message)}"\n\n⏰ <i>Gửi lúc: ${timeString}</i>\n📱 <i>Phiên duyệt: ${escapeHtml(String(body.sessionId || 'Ẩn danh'))}</i>`
+    const telegramSent = await sendTelegramNotification(telegramText)
 
     return NextResponse.json({
       success: true,
-      deliveredToTelegram: sent,
+      deliveredToDiscord: discordSent,
+      deliveredToTelegram: telegramSent,
       timestamp: Date.now(),
     })
   } catch (err: unknown) {
