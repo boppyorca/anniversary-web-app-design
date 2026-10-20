@@ -3,7 +3,11 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { execSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import sharp from 'sharp'
+
+async function getSharp() {
+  const mod = await import('sharp')
+  return mod.default || mod
+}
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -60,6 +64,7 @@ function checkTool(cmd) {
 }
 
 export async function processImage(inputBufferOrPath, outPath) {
+  const sharp = await getSharp()
   const metadata = await sharp(inputBufferOrPath).metadata()
   const origW = metadata.width || 1000
   const origH = metadata.height || 1000
@@ -371,6 +376,7 @@ export async function runFlipbookBuild(args = process.argv.slice(2)) {
       const filePath = path.join(MEDIA_DIR, filename)
       const group = getGroupName(pageIndex, allowAny)
 
+      const sharp = await getSharp()
       const meta = await sharp(filePath).metadata()
       const stats = fs.statSync(filePath)
       const sizeKB = Math.round(stats.size / 1024)
